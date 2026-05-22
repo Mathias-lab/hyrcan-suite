@@ -522,45 +522,18 @@ STEP 3: EXTERNAL BOUNDARY
   ▸ Geometry → External Boundary
   Type each line, press ENTER. Close with  c  on its own line.
 
- # Build clean boundary (no duplicates)
-boundary_pts = []
-boundary_pts.append((L, sy))  # seaward toe
-boundary_pts.append((L, B_mdl))  # bottom left
-boundary_pts.append((R, B_mdl))  # bottom right
-boundary_pts.append((R, sy))  # landward toe
-
-# Landward side — only add if they exist
-if g['single_slope_lw']:
-    boundary_pts.append((pts['cr'][0], cy))  # crest right
-else:
-    if g['lw_ldx'] > 0:
-        boundary_pts.append((pts['lw_be'][0], by))
-    if landward_berm > 0:
-        boundary_pts.append((pts['lw_bs'][0], by))
-    boundary_pts.append((pts['cr'][0], cy))
-
-# Crest
-boundary_pts.append((pts['cl'][0], cy))
-
-# Seaward side — only add if they exist
-if g['single_slope_sw']:
-    boundary_pts.append((pts['sw_toe'][0], sy))  # back to toe
-else:
-    if g['sw_udx'] > 0:
-        boundary_pts.append((pts['sw_bs'][0], by))
-    if seaward_berm > 0:
-        boundary_pts.append((pts['sw_be'][0], by))
-    if g['sw_ldx'] > 0:
-        boundary_pts.append((pts['sw_toe'][0], sy))
-
-# Remove consecutive duplicates
-clean_pts = []
-for pt in boundary_pts:
-    if not clean_pts or abs(pt[0] - clean_pts[-1][0]) > 0.0001 or abs(pt[1] - clean_pts[-1][1]) > 0.0001:
-        clean_pts.append(pt)
-
-# Generate text
-boundary_text = "\n".join([f"  {x:.3f},{y:.3f}" for x, y in clean_pts]) + "\n  c"
+  {L:.3f},{sy:.3f}
+  {L:.3f},{B_mdl:.3f}
+  {R:.3f},{B_mdl:.3f}
+  {R:.3f},{sy:.3f}
+  {pts['lw_be'][0]:.3f},{by:.3f}
+  {pts['lw_bs'][0]:.3f},{by:.3f}
+  {pts['cr'][0]:.3f},{cy:.3f}
+  {pts['cl'][0]:.3f},{cy:.3f}
+  {pts['sw_bs'][0]:.3f},{by:.3f}
+  {pts['sw_be'][0]:.3f},{by:.3f}
+  {pts['sw_toe'][0]:.3f},{sy:.3f}
+  c
 
   ⚠  No spaces after commas. Press Enter after EVERY line.
 
@@ -998,9 +971,10 @@ def section(label):
 
 def num(label, key, **kw):
     kw.setdefault('format', '%.2f')
-    st.session_state[key] = st.number_input(
+    val = st.number_input(
         label, value=float(st.session_state[key]), key=f'_ni_{key}', **kw)
-    return st.session_state[key]
+    st.session_state[key] = val
+    return val
 
 def txt(label, key):
     st.session_state[key] = st.text_input(label, value=st.session_state[key], key=f'_ti_{key}')
@@ -1123,14 +1097,20 @@ with tab1:
         valid = abs((uh + lh) - (ce - se)) <= 0.01
 
         if generate and valid:
-            g = compute_geometry(ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, layers)
-            st.session_state['rm_g'] = g
-            st.session_state['rm_layers'] = layers
-            st.session_state['rm_layer_names'] = layer_names
-            st.session_state['rm_layer_thicknesses'] = layer_thicknesses
-            st.session_state['rm_layer_props'] = layer_props
-            st.session_state['rm_n_layers_gen'] = n_layers
-            st.session_state['rm_generated'] = True
+    g = compute_geometry(ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, layers)
+    st.session_state['rm_g'] = g
+    st.session_state['rm_layers'] = layers
+    st.session_state['rm_layer_names'] = layer_names
+    st.session_state['rm_layer_thicknesses'] = layer_thicknesses
+    st.session_state['rm_layer_props'] = layer_props
+    st.session_state['rm_n_layers_gen'] = n_layers
+    st.session_state['rm_sw_upper_gen'] = sw_u
+    st.session_state['rm_sw_lower_gen'] = sw_l
+    st.session_state['rm_sw_berm_gen']  = sw_b
+    st.session_state['rm_lw_upper_gen'] = lw_u
+    st.session_state['rm_lw_lower_gen'] = lw_l
+    st.session_state['rm_lw_berm_gen']  = lw_b
+    st.session_state['rm_generated'] = True
 
         # Live preview (always shown)
         section("📊  Cross-Section Preview")
@@ -1150,7 +1130,14 @@ with tab1:
             nl     = st.session_state['rm_n_layers_gen']
 
             section("✅  Automatic Verification")
-            checks = verify_geometry(g, ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b)
+            _sw_u = st.session_state.get('rm_sw_upper_gen', sw_u)
+            _sw_l = st.session_state.get('rm_sw_lower_gen', sw_l)
+            _sw_b = st.session_state.get('rm_sw_berm_gen',  sw_b)
+            _lw_u = st.session_state.get('rm_lw_upper_gen', lw_u)
+            _lw_l = st.session_state.get('rm_lw_lower_gen', lw_l)
+            _lw_b = st.session_state.get('rm_lw_berm_gen',  lw_b)
+
+            checks = verify_geometry(g, ce, se, cw, uh, lh, _sw_u, _sw_l, _sw_b, _lw_u, _lw_l, _lw_b)
             all_ok = all(c[3] for c in checks)
             if all_ok:
                 st.success('All geometry checks passed ✅', icon='✅')
