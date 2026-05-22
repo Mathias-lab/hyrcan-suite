@@ -729,24 +729,15 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
     )
     ax.add_patch(load_rect)
 
-    # Downward arrows inside the rectangle (from top of block to crest)
-    n_arrows = max(3, int(crest_w / 2.0))
-    arrow_xs = np.linspace(cl_x + crest_w * 0.1, cr_x - crest_w * 0.1, n_arrows)
-    arrow_top = ce + gap + block_h                 # top of the rectangle
-    for ax_x in arrow_xs:
-        ax.annotate(
-            '', xy=(ax_x, ce + gap), xytext=(ax_x, arrow_top),
-            arrowprops=dict(arrowstyle='->', color='#ff6b35', lw=1.5),
-            zorder=11,
-        )
+  
 
     # Bold magnitude label centred above the block (outside the rectangle)
     ax.text(
-        (cl_x + cr_x) / 2, arrow_top + 0.3,
-        f'Distributed Load = {surcharge:.1f} kN/m²',
-        ha='center', va='bottom', fontsize=8.5, fontweight='bold',
-        color='#ff6b35', zorder=12,
-    )
+    (cl_x + cr_x) / 2, ce + gap + block_h + 0.8,
+    f'{surcharge:.1f} kN/m²',
+    ha='center', va='bottom', fontsize=9, fontweight='bold',
+    color='#ff6b35', zorder=12,
+)
     
   
     # Layer labels (left margin)
