@@ -6,18 +6,17 @@ Created on Fri May 22 11:45:29 2026
 """
 
 """
-HYRCAN Engineering Suite v3.0 — Streamlit Web Application
-Module 1: Rubble Mound Embankment — HYRCAN Coordinate Generator
-Module 2: Vertical Caisson — Direct FOS Stability Analysis
-Module 3: Wave Run-Up Calculator (EurOtop 2018 / JTS 154-1-2011 / GB 50286-2013)
+st.markdown("""
+<div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 20px;margin-bottom:16px;">
+  <div style="color:#58a6ff;font-weight:600;font-size:13px;">⚡ Quick Start</div>
+  <div style="color:#8b949e;font-size:12px;margin-top:4px;">
+    <b>Tab 1:</b> Rubble Mound — Enter geometry → Generate HYRCAN coordinates<br>
+    <b>Tab 2:</b> Caisson Stability — Adjust parameters → Live FOS results<br>
+    <b>Tab 3:</b> Wave Run-Up — Input wave conditions → Full EurOtop 2018 results
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-Developer: Mathias Adjei Tawiah
-Email: mathiasadjeitawiah@gmail.com
-Institution: Hohai University — College of Harbor, Coastal, and Offshore Engineering
-Standards: EurOtop 2018 | JTS 154-1-2011 | GB 50286-2013
-
-Coordinate logic verified against HYRCAN 3.0.
-DO NOT modify the core calculation functions.
 """
 
 import streamlit as st
