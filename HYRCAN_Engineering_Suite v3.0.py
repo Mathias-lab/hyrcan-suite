@@ -720,8 +720,7 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
 
     # Coordinate labels
     for lbl, xp, yp, va in [
-        (f'({pts["cl"][0]:.1f}, {ce:.1f})', pts['cl'][0], ce + 0.3, 'bottom'),
-        (f'({pts["cr"][0]:.1f}, {ce:.1f})', pts['cr'][0], ce + 0.3, 'bottom'),
+       
         (f'({pts["sw_toe"][0]:.1f}, {se:.1f})', pts['sw_toe'][0], se - 0.7, 'top'),
         (f'({pts["lw_toe"][0]:.1f}, {se:.1f})', pts['lw_toe'][0], se - 0.7, 'top'),
     ]:
