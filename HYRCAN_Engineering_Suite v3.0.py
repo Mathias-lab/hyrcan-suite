@@ -107,7 +107,7 @@ html, body, [class*="css"] { font-family: 'Segoe UI', 'Inter', sans-serif; }
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════
-#  SIDEBAR — PROFESSIONAL WELCOME / ABOUT
+#  SIDEBAR
 # ════════════════════════════════════════════════════════════════════
 
 with st.sidebar:
@@ -188,14 +188,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════
-#  CORE CALCULATION FUNCTIONS — verified against HYRCAN 3.0
+#  CORE CALCULATION FUNCTIONS
 # ════════════════════════════════════════════════════════════════════
 
 def compute_layer_elevations(seabed_elev, thicknesses):
-    """
-    Auto-calculate all layer elevations from seabed and thicknesses.
-    Supports 1–5 layers. Returns dict with real elevations and HYRCAN Y values.
-    """
     tops = []
     bots = []
     cur = seabed_elev
@@ -214,7 +210,6 @@ def compute_layer_elevations(seabed_elev, thicknesses):
         result[f'Y_top{i+1}'] = Y(top)
         result[f'Y_bot{i+1}'] = Y(bot)
 
-    # Legacy keys for backward-compat (3-layer)
     if len(thicknesses) >= 3:
         result['top2'] = tops[1] if len(tops) > 1 else None
         result['bot2'] = bots[1] if len(bots) > 1 else None
@@ -231,28 +226,21 @@ def compute_geometry(crest_elev, seabed_elev, crest_width,
                      sw_upper, sw_lower, seaward_berm,
                      lw_upper, lw_lower, landward_berm,
                      layers):
-    """
-    Core coordinate engine — verified against HYRCAN 3.0.
-    Supports single-slope (berm=0) and double-slope (berm>0).
-    Build X left-to-right from seaward toe = 0.
-    """
     datum = layers['datum']
     def Y(e): return e + datum
 
     crest_y  = Y(crest_elev)
     seabed_y = Y(seabed_elev)
 
-    # Single slope vs double slope
     single_slope_sw = (seaward_berm == 0)
     single_slope_lw = (landward_berm == 0)
 
     if single_slope_sw:
-        # Single slope seaward: one continuous slope from toe to crest
         total_sw_dx = (upper_height + lower_height) * sw_upper
-        berm_y = Y(crest_elev - upper_height)  # intermediate ref only
+        berm_y = Y(crest_elev - upper_height)
         x_sw_toe = 0.0
-        x_sw_be  = x_sw_toe   # collapsed
-        x_sw_bs  = x_sw_toe   # collapsed
+        x_sw_be  = x_sw_toe
+        x_sw_bs  = x_sw_toe
         x_cl     = x_sw_toe + total_sw_dx
     else:
         berm_y  = Y(crest_elev - upper_height)
@@ -282,8 +270,8 @@ def compute_geometry(crest_elev, seabed_elev, crest_width,
     if single_slope_sw:
         pts = {
             'sw_toe': (x_sw_toe, seabed_y),
-            'sw_be':  (x_sw_toe, seabed_y),   # coincident
-            'sw_bs':  (x_sw_toe, seabed_y),   # coincident
+            'sw_be':  (x_sw_toe, seabed_y),
+            'sw_bs':  (x_sw_toe, seabed_y),
             'cl':     (x_cl,     crest_y),
             'cr':     (x_cr,     crest_y),
             'lw_bs':  (x_lw_bs, berm_y if not single_slope_lw else seabed_y),
@@ -372,35 +360,29 @@ def caisson_fos(B, H_c, gamma_c, d, H1pct, gamma_w, mu, q_allow):
 
 
 # ════════════════════════════════════════════════════════════════════
-#  WAVE RUN-UP FUNCTIONS — EurOtop 2018 (exact Tkinter formulas)
+#  WAVE RUN-UP FUNCTIONS — EurOtop 2018
 # ════════════════════════════════════════════════════════════════════
 
 def calc_wavelength(T):
-    """Deep water wavelength L0 = g*T^2 / (2*pi)"""
     return 9.81 * T**2 / (2 * math.pi)
 
 def calc_iribarren(tan_alpha, H, L0):
-    """Iribarren / surf-similarity number xi = tan(alpha)/sqrt(H/L0)"""
     if H <= 0 or L0 <= 0:
         return 0.0
     return tan_alpha / math.sqrt(H / L0)
 
 def calc_runup_2percent(H, xi, gamma_f, gamma_b, gamma_beta):
-    """EurOtop 2018 Eq 5.2 — Ru2% for rough slopes"""
     ru = 1.65 * gamma_b * gamma_f * gamma_beta * xi * H
     ru_max = (4.0 - 1.5 / math.sqrt(gamma_f * gamma_beta * xi + 1e-12)) * gamma_b * H
     return min(ru, ru_max)
 
 def calc_runup_1percent(H, xi, gamma_f, gamma_b, gamma_beta):
-    """Run-up exceeded by 1% of waves (approx 1.4 × Ru2%)"""
     return 1.4 * calc_runup_2percent(H, xi, gamma_f, gamma_b, gamma_beta)
 
 def calc_reflection(xi):
-    """Postma (1989) reflection coefficient Cr"""
     return 0.1 * xi**2 if xi > 0 else 0.0
 
 def calc_overtopping(H, L0, xi, Rc, gamma_f, gamma_beta):
-    """EurOtop 2018 Eq 5.6 — mean overtopping discharge q (m³/s/m)"""
     if H <= 0 or L0 <= 0 or xi <= 0:
         return 0.0
     term = (Rc / (gamma_f * gamma_beta * H)) * (1.0 / xi)
@@ -408,14 +390,12 @@ def calc_overtopping(H, L0, xi, Rc, gamma_f, gamma_beta):
     return max(q, 0.0)
 
 def calc_obliquity_factor(beta_deg):
-    """EurOtop 2018 obliquity factor gamma_beta"""
     b = abs(beta_deg)
     if b <= 80:
         return max(1.0 - 0.0033 * b, 0.736)
     return 0.736
 
 def classify_breaker(xi):
-    """Breaker type classification from Iribarren number"""
     if xi < 0.5:
         return "Spilling"
     elif xi < 2.0:
@@ -424,6 +404,36 @@ def classify_breaker(xi):
         return "Collapsing"
     else:
         return "Surging"
+
+# ════════════════════════════════════════════════════════════════════
+#  HELPER: BUILD CLEAN BOUNDARY
+# ════════════════════════════════════════════════════════════════════
+
+def build_clean_boundary(g, pts, L, R, B_mdl, sy, cy, by, seaward_berm, landward_berm):
+    """Build external boundary point list with no consecutive duplicates."""
+    raw = []
+    raw.append((L, sy))
+    raw.append((L, B_mdl))
+    raw.append((R, B_mdl))
+    raw.append((R, sy))
+    if not g['single_slope_lw']:
+        if g['lw_ldx'] > 0.001:
+            raw.append((pts['lw_be'][0], by))
+        if landward_berm > 0.001:
+            raw.append((pts['lw_bs'][0], by))
+    raw.append((pts['cr'][0], cy))
+    raw.append((pts['cl'][0], cy))
+    if not g['single_slope_sw']:
+        if g['sw_udx'] > 0.001:
+            raw.append((pts['sw_bs'][0], by))
+        if seaward_berm > 0.001:
+            raw.append((pts['sw_be'][0], by))
+    raw.append((pts['sw_toe'][0], sy))
+    clean = []
+    for pt in raw:
+        if not clean or abs(pt[0] - clean[-1][0]) > 0.001 or abs(pt[1] - clean[-1][1]) > 0.001:
+            clean.append(pt)
+    return clean
 
 # ════════════════════════════════════════════════════════════════════
 #  TEXT GENERATION
@@ -461,11 +471,9 @@ def generate_hyrcan_instructions(
         "└──────────────────┴────────────────┴────────────────┴──────────────┘",
     ])
 
-    # Build boundary lines
     bound_lines = ""
     for i in range(n_layers - 1):
         key = f'Y_bot{i+1}'
-        rkey_top = f'top{i+1}'; rkey_bot = f'bot{i+1}'
         n_top = layer_names[i]; n_bot = layer_names[i+1]
         bound_lines += f"""
   ── Boundary {i+1}: Bottom of {n_top} / Top of {n_bot} ──────────────
@@ -487,6 +495,10 @@ def generate_hyrcan_instructions(
     assign_table = "\n".join(assign_rows)
 
     slope_note = "Single-slope (no berm)" if g['single_slope_sw'] else "Double-slope with berm"
+
+    # Build clean boundary text
+    clean_pts = build_clean_boundary(g, pts, L, R, B_mdl, sy, cy, by, seaward_berm, landward_berm)
+    boundary_lines = "\n".join([f"  {x:.3f},{y:.3f}" for x, y in clean_pts]) + "\n  c"
 
     out = f"""\
 {'='*72}
@@ -522,18 +534,7 @@ STEP 3: EXTERNAL BOUNDARY
   ▸ Geometry → External Boundary
   Type each line, press ENTER. Close with  c  on its own line.
 
-  {L:.3f},{sy:.3f}
-  {L:.3f},{B_mdl:.3f}
-  {R:.3f},{B_mdl:.3f}
-  {R:.3f},{sy:.3f}
-  {pts['lw_be'][0]:.3f},{by:.3f}
-  {pts['lw_bs'][0]:.3f},{by:.3f}
-  {pts['cr'][0]:.3f},{cy:.3f}
-  {pts['cl'][0]:.3f},{cy:.3f}
-  {pts['sw_bs'][0]:.3f},{by:.3f}
-  {pts['sw_be'][0]:.3f},{by:.3f}
-  {pts['sw_toe'][0]:.3f},{sy:.3f}
-  c
+{boundary_lines}
 
   ⚠  No spaces after commas. Press Enter after EVERY line.
 
@@ -616,23 +617,23 @@ MODEL DIMENSIONS
     return out
 
 
-def generate_coordinates_txt(g, layers, dhw, surcharge, crest_elev, seabed_elev, n_layers):
+def generate_coordinates_txt(g, layers, dhw, surcharge, crest_elev, seabed_elev, n_layers,
+                              seaward_berm=0, landward_berm=0):
     pts = g['pts']
     cy  = g['crest_y']; sy = g['seabed_y']; by = g['berm_y']
     L   = 0.0; R = g['model_right']; B = 0.0
     datum = layers['datum']
     dy    = dhw + datum
 
+    clean_pts = build_clean_boundary(g, pts, L, R, B, sy, cy, by, seaward_berm, landward_berm)
+    clean_lines = [f"{x:.3f},{y:.3f}" for x, y in clean_pts] + ["c"]
+
     lines = [
         "HYRCAN COORDINATE EXPORT — v3.0",
         f"Datum shift: +{datum:.3f} m",
         "",
         "EXTERNAL BOUNDARY",
-        f"{L:.3f},{sy:.3f}", f"{L:.3f},{B:.3f}", f"{R:.3f},{B:.3f}", f"{R:.3f},{sy:.3f}",
-        f"{pts['lw_be'][0]:.3f},{by:.3f}", f"{pts['lw_bs'][0]:.3f},{by:.3f}",
-        f"{pts['cr'][0]:.3f},{cy:.3f}", f"{pts['cl'][0]:.3f},{cy:.3f}",
-        f"{pts['sw_bs'][0]:.3f},{by:.3f}", f"{pts['sw_be'][0]:.3f},{by:.3f}",
-        f"{pts['sw_toe'][0]:.3f},{sy:.3f}", "c",
+        *clean_lines,
         "",
         f"MATERIAL BOUNDARY 0 (Seabed):",
         f"{L:.3f},{layers['Y_seabed']:.3f}", f"{R:.3f},{layers['Y_seabed']:.3f}", "d",
@@ -662,9 +663,9 @@ LAYER_COLORS = ['#C9B99A', '#A8B5A0', '#B5C4D1', '#D1B5C4', '#B5D1C4']
 
 def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
                       upper_height, lower_height, layer_names, n_layers):
-    pts   = g['pts']
-    ce    = crest_elev
-    se    = seabed_elev
+    pts    = g['pts']
+    ce     = crest_elev
+    se     = seabed_elev
     berm_e = ce - upper_height
 
     fig, ax = plt.subplots(figsize=(12, 6), dpi=120)
@@ -674,7 +675,6 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
     xl = pts['sw_toe'][0]
     xr = pts['lw_toe'][0]
 
-    # Soil layers (real elevation coords)
     for i in range(n_layers):
         top_e = layers[f'top{i+1}']
         bot_e = layers[f'bot{i+1}']
@@ -685,7 +685,6 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
 
     ax.axhline(y=se, color='#607d8b', lw=1.3, ls='--', zorder=2)
 
-    # Embankment (real elevation)
     if g['single_slope_sw'] and g['single_slope_lw']:
         xs = [pts['sw_toe'][0], pts['cl'][0], pts['cr'][0], pts['lw_toe'][0], pts['sw_toe'][0]]
         ys = [se, ce, ce, se, se]
@@ -706,21 +705,15 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
     ax.fill(xs, ys, facecolor='#C9A96E', alpha=0.88,
             edgecolor='#7B5E3A', lw=1.5, zorder=3)
 
-    # Water table
     ax.axhline(y=dhw, color='#3A7EC4', ls='--', lw=2.0, zorder=4)
-    # ── Ensure required imports are available ──────────────────────
-    import matplotlib.patches as mpatches
-    import numpy as np
 
-        # ── Distributed load (surcharge) on full crest width ──────────
-    surcharge = st.session_state.get('rm_surcharge', 10.0)
-    cl_x = pts['cl'][0]
-    cr_x = pts['cr'][0]
-    crest_w = cr_x - cl_x                          # exact crest width
-    block_h = max(crest_w * 0.06, 0.4)             # small height
-    gap = 0.15                                     # small gap above crest
+    surcharge_val = st.session_state.get('rm_surcharge', 10.0)
+    cl_x  = pts['cl'][0]
+    cr_x  = pts['cr'][0]
+    crest_w = cr_x - cl_x
+    block_h = max(crest_w * 0.06, 0.4)
+    gap = 0.15
 
-    # Hatched rectangle sitting just above the crest surface
     load_rect = mpatches.FancyBboxPatch(
         (cl_x, ce + gap), crest_w, block_h,
         boxstyle='square,pad=0',
@@ -729,18 +722,13 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
     )
     ax.add_patch(load_rect)
 
-  
-
-    # Bold magnitude label centred above the block (outside the rectangle)
     ax.text(
-    (cl_x + cr_x) / 2, ce + gap + block_h + 0.8,
-    f'{surcharge:.1f} kN/m²',
-    ha='center', va='bottom', fontsize=9, fontweight='bold',
-    color='#ff6b35', zorder=12,
-)
-    
-  
-    # Layer labels (left margin)
+        (cl_x + cr_x) / 2, ce + gap + block_h + 0.8,
+        f'{surcharge_val:.1f} kN/m²',
+        ha='center', va='bottom', fontsize=9, fontweight='bold',
+        color='#ff6b35', zorder=12,
+    )
+
     lx = xl - (xr - xl) * 0.015
     for i in range(n_layers):
         top_e = layers[f'top{i+1}']
@@ -749,9 +737,7 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
                 fontsize=9, va='center', ha='right',
                 fontstyle='italic', color='#ccc', zorder=5)
 
-    # Coordinate labels
     for lbl, xp, yp, va in [
-       
         (f'({pts["sw_toe"][0]:.1f}, {se:.1f})', pts['sw_toe'][0], se - 0.7, 'top'),
         (f'({pts["lw_toe"][0]:.1f}, {se:.1f})', pts['lw_toe'][0], se - 0.7, 'top'),
     ]:
@@ -906,7 +892,6 @@ _default('rm_surcharge',    10.0)
 _default('rm_num_slices',   50.0)
 _default('rm_n_layers',      3)
 
-# Layer defaults (5 layers)
 _default('rm_n1', 'Soft Silt');    _default('rm_t1', 7.8)
 _default('rm_g1', 16.5);  _default('rm_c1', 6.0);  _default('rm_phi1', 8.0)
 _default('rm_n2', 'Silty Clay');   _default('rm_t2', 10.2)
@@ -928,11 +913,10 @@ _default('cs_gamma_w', 10.25)
 _default('cs_mu',       0.60)
 _default('cs_q_allow', 500.0)
 
-# Wave run-up defaults
-_default('wu_H',      2.0)
-_default('wu_T',     10.0)
-_default('wu_slope',  2.5)
-_default('wu_Rc',     1.5)
+_default('wu_H',       2.0)
+_default('wu_T',      10.0)
+_default('wu_slope',   2.5)
+_default('wu_Rc',      1.5)
 _default('wu_gamma_f', 0.55)
 _default('wu_gamma_b', 1.0)
 _default('wu_beta',    0.0)
@@ -1038,7 +1022,6 @@ with tab1:
             sw_b = num('Seaward berm (m)', 'rm_sw_berm', min_value=0.0)
             lw_b = num('Landward berm (m)', 'rm_lw_berm', min_value=0.0)
 
-        # Slope type indicator
         sw_type = "Single-slope" if sw_b == 0 else f"Double-slope (berm {sw_b:.1f} m)"
         lw_type = "Single-slope" if lw_b == 0 else f"Double-slope (berm {lw_b:.1f} m)"
         st.caption(f"Seaward: **{sw_type}**  |  Landward: **{lw_type}**")
@@ -1050,12 +1033,11 @@ with tab1:
         with c3: ns  = num('No. of slices', 'rm_num_slices', min_value=10.0, step=5.0, format='%.0f')
 
         section("🧱  Soil Layers  (up to 5)")
-
-        n_layers = st.slider('Number of layers', min_value=3, max_value=5, value=int(st.session_state['rm_n_layers']), step=1)
+        n_layers = st.slider('Number of layers', min_value=3, max_value=5,
+                             value=int(st.session_state['rm_n_layers']), step=1)
         st.session_state['rm_n_layers'] = n_layers
 
         layer_names = []; layer_thicknesses = []; layer_props = []
-        LAYER_LABELS = ['Layer 1', 'Layer 2', 'Layer 3', 'Layer 4', 'Layer 5']
 
         for i in range(1, n_layers + 1):
             st.markdown(f"**Layer {i}**")
@@ -1071,20 +1053,20 @@ with tab1:
 
         st.markdown("**Embankment (Rubble)**")
         c1, c2, c3 = st.columns(3)
-        with c1: gr  = num('γ (kN/m³)', 'rm_gr', min_value=10.0)
-        with c2: cr_ = num('c (kPa)',   'rm_cr_', min_value=0.0)
-        with c3: phir= num('φ (°)',     'rm_phir', min_value=0.0)
+        with c1: gr   = num('γ (kN/m³)', 'rm_gr',  min_value=10.0)
+        with c2: cr_  = num('c (kPa)',   'rm_cr_', min_value=0.0)
+        with c3: phir = num('φ (°)',     'rm_phir',min_value=0.0)
 
         layers = compute_layer_elevations(se, layer_thicknesses)
 
         section("📊  Live Layer Elevation Preview")
         df_rows = {
-            'Layer':          layer_names,
-            'Top Elev (m)':   [f"{layers[f'top{i+1}']:.3f}" for i in range(n_layers)],
-            'Bottom Elev (m)':[f"{layers[f'bot{i+1}']:.3f}" for i in range(n_layers)],
-            'Thickness (m)':  [f"{layer_thicknesses[i]:.2f}" for i in range(n_layers)],
-            'HYRCAN Y_top':   [f"{layers[f'Y_top{i+1}']:.3f}" for i in range(n_layers)],
-            'HYRCAN Y_bot':   [f"{layers[f'Y_bot{i+1}']:.3f}" for i in range(n_layers)],
+            'Layer':           layer_names,
+            'Top Elev (m)':    [f"{layers[f'top{i+1}']:.3f}" for i in range(n_layers)],
+            'Bottom Elev (m)': [f"{layers[f'bot{i+1}']:.3f}" for i in range(n_layers)],
+            'Thickness (m)':   [f"{layer_thicknesses[i]:.2f}" for i in range(n_layers)],
+            'HYRCAN Y_top':    [f"{layers[f'Y_top{i+1}']:.3f}" for i in range(n_layers)],
+            'HYRCAN Y_bot':    [f"{layers[f'Y_bot{i+1}']:.3f}" for i in range(n_layers)],
         }
         st.dataframe(pd.DataFrame(df_rows), use_container_width=True, hide_index=True)
         st.caption(f"Datum shift: **+{layers['datum']:.3f} m**  |  Bottom of {layer_names[-1]} → Y = 0.000")
@@ -1094,25 +1076,25 @@ with tab1:
 
     with right_col:
         layers = compute_layer_elevations(se, layer_thicknesses)
-        valid = abs((uh + lh) - (ce - se)) <= 0.01
+        valid  = abs((uh + lh) - (ce - se)) <= 0.01
 
         if generate and valid:
             g = compute_geometry(ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, layers)
-            st.session_state['rm_g'] = g
-            st.session_state['rm_layers'] = layers
-            st.session_state['rm_layer_names'] = layer_names
-            st.session_state['rm_layer_thicknesses'] = layer_thicknesses
-            st.session_state['rm_layer_props'] = layer_props
-            st.session_state['rm_n_layers_gen'] = n_layers
-            st.session_state['rm_sw_upper_gen'] = sw_u
-            st.session_state['rm_sw_lower_gen'] = sw_l
-            st.session_state['rm_sw_berm_gen']  = sw_b
-            st.session_state['rm_lw_upper_gen'] = lw_u
-            st.session_state['rm_lw_lower_gen'] = lw_l
-            st.session_state['rm_lw_berm_gen']  = lw_b
-            st.session_state['rm_generated'] = True
+            st.session_state['rm_g']                  = g
+            st.session_state['rm_layers']             = layers
+            st.session_state['rm_layer_names']        = layer_names
+            st.session_state['rm_layer_thicknesses']  = layer_thicknesses
+            st.session_state['rm_layer_props']        = layer_props
+            st.session_state['rm_n_layers_gen']       = n_layers
+            st.session_state['rm_sw_upper_gen']       = sw_u
+            st.session_state['rm_sw_lower_gen']       = sw_l
+            st.session_state['rm_sw_berm_gen']        = sw_b
+            st.session_state['rm_lw_upper_gen']       = lw_u
+            st.session_state['rm_lw_lower_gen']       = lw_l
+            st.session_state['rm_lw_berm_gen']        = lw_b
+            st.session_state['rm_generated']          = True
 
-        # Live preview (always shown)
+        # Live preview
         section("📊  Cross-Section Preview")
         try:
             g_prev = compute_geometry(ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, layers)
@@ -1129,7 +1111,6 @@ with tab1:
             lprops = st.session_state['rm_layer_props']
             nl     = st.session_state['rm_n_layers_gen']
 
-            section("✅  Automatic Verification")
             _sw_u = st.session_state.get('rm_sw_upper_gen', sw_u)
             _sw_l = st.session_state.get('rm_sw_lower_gen', sw_l)
             _sw_b = st.session_state.get('rm_sw_berm_gen',  sw_b)
@@ -1137,6 +1118,7 @@ with tab1:
             _lw_l = st.session_state.get('rm_lw_lower_gen', lw_l)
             _lw_b = st.session_state.get('rm_lw_berm_gen',  lw_b)
 
+            section("✅  Automatic Verification")
             checks = verify_geometry(g, ce, se, cw, uh, lh, _sw_u, _sw_l, _sw_b, _lw_u, _lw_l, _lw_b)
             all_ok = all(c[3] for c in checks)
             if all_ok:
@@ -1162,14 +1144,15 @@ with tab1:
             section("📖  Complete HYRCAN Step-by-Step Instructions")
             instructions = generate_hyrcan_instructions(
                 g, layers, dhw, q, ns, ce, se, uh, lh,
-                sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, cw,
+                _sw_u, _sw_l, _sw_b, _lw_u, _lw_l, _lw_b, cw,
                 lnames, lprops, nl, mat_rubble=(gr, cr_, phir))
             st.markdown(f'<div class="coord-block">{instructions}</div>', unsafe_allow_html=True)
 
             st.markdown('<br>', unsafe_allow_html=True)
             dc1, dc2 = st.columns(2)
             with dc1:
-                coords_txt = generate_coordinates_txt(g, layers, dhw, q, ce, se, nl)
+                coords_txt = generate_coordinates_txt(
+                    g, layers, dhw, q, ce, se, nl, _sw_b, _lw_b)
                 st.download_button('📥 Export Coordinates (.txt)', data=coords_txt,
                                    file_name='hyrcan_coordinates.txt', mime='text/plain',
                                    use_container_width=True)
@@ -1331,8 +1314,8 @@ with tab3:
     with left3:
         section("🌊  Wave Parameters")
         c1, c2 = st.columns(2)
-        with c1: H_wu  = num('Significant wave height H_m0 (m)', 'wu_H', min_value=0.1)
-        with c2: T_wu  = num('Peak wave period T_p (s)',          'wu_T', min_value=1.0)
+        with c1: H_wu = num('Significant wave height H_m0 (m)', 'wu_H', min_value=0.1)
+        with c2: T_wu = num('Peak wave period T_p (s)',          'wu_T', min_value=1.0)
 
         section("📐  Structure Geometry")
         slope_wu = num('Slope ratio (H:V)  e.g. 2.5 means 1:2.5', 'wu_slope', min_value=0.1)
@@ -1347,24 +1330,16 @@ with tab3:
         with st.expander("📋  Roughness Factor Reference Table (γ_f)"):
             rf_data = {
                 'Structure Type': [
-                    'Smooth impermeable (concrete)',
-                    'Asphalt',
-                    'Grass (short)',
-                    'Grass (long / rough)',
-                    'Single-size rock (permeable)',
-                    'Double-layer rock (permeable)',
-                    'Rock armour (rough permeable)',
-                    'Tetrapods',
-                    'Accropode',
-                    'Xbloc',
-                    'Cube (single layer)',
-                    'Cube (double layer)',
+                    'Smooth impermeable (concrete)', 'Asphalt', 'Grass (short)',
+                    'Grass (long / rough)', 'Single-size rock (permeable)',
+                    'Double-layer rock (permeable)', 'Rock armour (rough permeable)',
+                    'Tetrapods', 'Accropode', 'Xbloc',
+                    'Cube (single layer)', 'Cube (double layer)',
                 ],
                 'γ_f': [
                     '1.00', '1.00', '1.00', '0.90–1.00',
                     '0.55', '0.45', '0.40–0.55',
-                    '0.38', '0.46', '0.45',
-                    '0.47', '0.50',
+                    '0.38', '0.46', '0.45', '0.47', '0.50',
                 ]
             }
             st.dataframe(pd.DataFrame(rf_data), use_container_width=True, hide_index=True)
@@ -1373,37 +1348,34 @@ with tab3:
         calc_wu = st.button('Calculate Run-Up & Overtopping', type='primary', use_container_width=True)
 
     with right3:
-        # Compute
         tan_alpha = 1.0 / slope_wu
-        L0  = calc_wavelength(T_wu)
-        xi  = calc_iribarren(tan_alpha, H_wu, L0)
+        L0    = calc_wavelength(T_wu)
+        xi    = calc_iribarren(tan_alpha, H_wu, L0)
         gbeta = calc_obliquity_factor(beta_wu)
-        Ru2  = calc_runup_2percent(H_wu, xi, gf_wu, gb_wu, gbeta)
-        Ru1  = calc_runup_1percent(H_wu, xi, gf_wu, gb_wu, gbeta)
-        Cr   = min(calc_reflection(xi), 1.0)
-        q    = calc_overtopping(H_wu, L0, xi, Rc_wu, gf_wu, gbeta)
+        Ru2   = calc_runup_2percent(H_wu, xi, gf_wu, gb_wu, gbeta)
+        Ru1   = calc_runup_1percent(H_wu, xi, gf_wu, gb_wu, gbeta)
+        Cr    = min(calc_reflection(xi), 1.0)
+        q_wu  = calc_overtopping(H_wu, L0, xi, Rc_wu, gf_wu, gbeta)
         btype = classify_breaker(xi)
 
-        # Results always visible
         section("📊  Results  (live)")
-
         m1, m2, m3 = st.columns(3)
-        m1.metric("Wavelength L₀ (m)",     f"{L0:.2f}")
-        m2.metric("Iribarren ξ",            f"{xi:.3f}")
-        m3.metric("Breaker Type",           btype)
+        m1.metric("Wavelength L₀ (m)", f"{L0:.2f}")
+        m2.metric("Iribarren ξ",        f"{xi:.3f}")
+        m3.metric("Breaker Type",        btype)
 
         m4, m5, m6 = st.columns(3)
-        m4.metric("Ru2% (m)",               f"{Ru2:.3f}")
-        m5.metric("Ru1% (m)",               f"{Ru1:.3f}")
-        m6.metric("Reflection Cr",          f"{Cr:.3f}")
+        m4.metric("Ru2% (m)",  f"{Ru2:.3f}")
+        m5.metric("Ru1% (m)",  f"{Ru1:.3f}")
+        m6.metric("Reflection Cr", f"{Cr:.3f}")
 
         m7, m8, m9 = st.columns(3)
-        m7.metric("γ_beta (obliquity)",     f"{gbeta:.3f}")
-        m8.metric("Mean overtopping q",     f"{q*1000:.4f} L/s/m" if q < 0.001 else f"{q:.6f} m³/s/m")
-        m9.metric("Rc / Ru2%",             f"{Rc_wu/Ru2:.3f}" if Ru2 > 0 else "—")
+        m7.metric("γ_beta (obliquity)", f"{gbeta:.3f}")
+        m8.metric("Mean overtopping q",
+                  f"{q_wu*1000:.4f} L/s/m" if q_wu < 0.001 else f"{q_wu:.6f} m³/s/m")
+        m9.metric("Rc / Ru2%", f"{Rc_wu/Ru2:.3f}" if Ru2 > 0 else "—")
 
-        # Overtopping assessment
-        q_ls = q * 1000
+        q_ls = q_wu * 1000
         if q_ls < 0.01:
             st.success(f"✅  Mean overtopping = {q_ls:.4f} L/s/m — Negligible (< 0.01 L/s/m). Design adequate.", icon='✅')
         elif q_ls < 1.0:
@@ -1456,7 +1428,7 @@ STEP 4 — Reflection Coefficient (Postma 1989)
 
 STEP 5 — Mean Overtopping Discharge (EurOtop 2018, Eq. 5.6)
   q = √(g·H_m0³) / √(L₀/H_m0) · 0.2 · exp(-2.3 · Rc/(γ_f·γ_β·H_m0·ξ))
-  q = {q:.6f} m³/s/m  =  {q*1000:.4f} L/s/m
+  q = {q_wu:.6f} m³/s/m  =  {q_wu*1000:.4f} L/s/m
 
 STEP 6 — Obliquity Factor (EurOtop 2018)
   γ_β = max(1 - 0.0033·β, 0.736)  [β = {beta_wu:.1f}°]
