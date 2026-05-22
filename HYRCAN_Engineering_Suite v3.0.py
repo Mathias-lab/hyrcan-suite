@@ -4,6 +4,17 @@ Created on Fri May 22 11:45:29 2026
 
 @author: Mathias Adjei Tawiah
 """
+import streamlit as st
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import numpy as np
+import json
+import io
+import math
+import pandas as pd
 
 st.markdown("""
 <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 20px;margin-bottom:16px;">
@@ -16,17 +27,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-import streamlit as st
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
-import numpy as np
-import json
-import io
-import math
-import pandas as pd
 
 # ════════════════════════════════════════════════════════════════════
 #  PAGE CONFIG & THEME
