@@ -5,19 +5,16 @@ Created on Fri May 22 11:45:29 2026
 @author: Mathias Adjei Tawiah
 """
 
-"""
 st.markdown("""
 <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 20px;margin-bottom:16px;">
-  <div style="color:#58a6ff;font-weight:600;font-size:13px;">&#9889; Quick Start</div>
+  <div style="color:#58a6ff;font-weight:600;font-size:13px;">Quick Start</div>
   <div style="color:#8b949e;font-size:12px;margin-top:4px;">
-    <b>Tab 1:</b> Rubble Mound &mdash; Enter geometry &rarr; Generate HYRCAN coordinates<br>
-    <b>Tab 2:</b> Caisson Stability &mdash; Adjust parameters &rarr; Live FOS results<br>
-    <b>Tab 3:</b> Wave Run-Up &mdash; Input wave conditions &rarr; Full EurOtop 2018 results
+    <b>Tab 1:</b> Rubble Mound — Enter geometry → Generate HYRCAN coordinates<br>
+    <b>Tab 2:</b> Caisson Stability — Adjust parameters → Live FOS results<br>
+    <b>Tab 3:</b> Wave Run-Up — Input wave conditions → Full EurOtop 2018 results
   </div>
 </div>
 """, unsafe_allow_html=True)
-
-"""
 
 import streamlit as st
 import matplotlib
