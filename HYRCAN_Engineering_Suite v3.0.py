@@ -1097,20 +1097,20 @@ with tab1:
         valid = abs((uh + lh) - (ce - se)) <= 0.01
 
         if generate and valid:
-    g = compute_geometry(ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, layers)
-    st.session_state['rm_g'] = g
-    st.session_state['rm_layers'] = layers
-    st.session_state['rm_layer_names'] = layer_names
-    st.session_state['rm_layer_thicknesses'] = layer_thicknesses
-    st.session_state['rm_layer_props'] = layer_props
-    st.session_state['rm_n_layers_gen'] = n_layers
-    st.session_state['rm_sw_upper_gen'] = sw_u
-    st.session_state['rm_sw_lower_gen'] = sw_l
-    st.session_state['rm_sw_berm_gen']  = sw_b
-    st.session_state['rm_lw_upper_gen'] = lw_u
-    st.session_state['rm_lw_lower_gen'] = lw_l
-    st.session_state['rm_lw_berm_gen']  = lw_b
-    st.session_state['rm_generated'] = True
+            g = compute_geometry(ce, se, cw, uh, lh, sw_u, sw_l, sw_b, lw_u, lw_l, lw_b, layers)
+            st.session_state['rm_g'] = g
+            st.session_state['rm_layers'] = layers
+            st.session_state['rm_layer_names'] = layer_names
+            st.session_state['rm_layer_thicknesses'] = layer_thicknesses
+            st.session_state['rm_layer_props'] = layer_props
+            st.session_state['rm_n_layers_gen'] = n_layers
+            st.session_state['rm_sw_upper_gen'] = sw_u
+            st.session_state['rm_sw_lower_gen'] = sw_l
+            st.session_state['rm_sw_berm_gen']  = sw_b
+            st.session_state['rm_lw_upper_gen'] = lw_u
+            st.session_state['rm_lw_lower_gen'] = lw_l
+            st.session_state['rm_lw_berm_gen']  = lw_b
+            st.session_state['rm_generated'] = True
 
         # Live preview (always shown)
         section("📊  Cross-Section Preview")
