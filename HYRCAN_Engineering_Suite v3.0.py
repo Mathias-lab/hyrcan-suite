@@ -712,40 +712,43 @@ def draw_rubble_mound(g, layers, dhw, crest_elev, seabed_elev,
     import matplotlib.patches as mpatches
     import numpy as np
 
-    # ── Distributed load (surcharge) on full crest width ──────────
+        # ── Distributed load (surcharge) on full crest width ──────────
     surcharge = st.session_state.get('rm_surcharge', 10.0)
     cl_x = pts['cl'][0]
     cr_x = pts['cr'][0]
     crest_w = cr_x - cl_x                          # exact crest width
-    block_h = max(crest_w * 0.12, 0.6)             # hatched block height
+    block_h = max(crest_w * 0.06, 0.4)             # small height
+    gap = 0.15                                     # small gap above crest
 
-    # Hatched rectangle sitting directly on the crest surface
+    # Hatched rectangle sitting just above the crest surface
     load_rect = mpatches.FancyBboxPatch(
-        (cl_x, ce), crest_w, block_h,
+        (cl_x, ce + gap), crest_w, block_h,
         boxstyle='square,pad=0',
         facecolor='#ff6b3533', edgecolor='#ff6b35',
-        lw=1.5, hatch='////', zorder=6,
+        lw=1.5, hatch='////', zorder=10,
     )
     ax.add_patch(load_rect)
 
-    # Downward arrows evenly spaced across the full crest width
-    n_arrows = max(3, int(crest_w / 1.5))
+    # Downward arrows inside the rectangle (from top of block to crest)
+    n_arrows = max(3, int(crest_w / 2.0))
     arrow_xs = np.linspace(cl_x + crest_w * 0.1, cr_x - crest_w * 0.1, n_arrows)
-    arrow_top = ce + block_h
+    arrow_top = ce + gap + block_h                 # top of the rectangle
     for ax_x in arrow_xs:
         ax.annotate(
-            '', xy=(ax_x, ce), xytext=(ax_x, arrow_top),
-            arrowprops=dict(arrowstyle='->', color='#ff6b35', lw=1.8),
-            zorder=7,
+            '', xy=(ax_x, ce + gap), xytext=(ax_x, arrow_top),
+            arrowprops=dict(arrowstyle='->', color='#ff6b35', lw=1.5),
+            zorder=11,
         )
 
-    # Bold magnitude label centred above the block
+    # Bold magnitude label centred above the block (outside the rectangle)
     ax.text(
-        (cl_x + cr_x) / 2, arrow_top + block_h * 0.3,
+        (cl_x + cr_x) / 2, arrow_top + 0.3,
         f'Distributed Load = {surcharge:.1f} kN/m²',
-        ha='center', va='bottom', fontsize=9, fontweight='bold',
-        color='#ff6b35', zorder=7,
+        ha='center', va='bottom', fontsize=8.5, fontweight='bold',
+        color='#ff6b35', zorder=12,
     )
+    
+  
     # Layer labels (left margin)
     lx = xl - (xr - xl) * 0.015
     for i in range(n_layers):
